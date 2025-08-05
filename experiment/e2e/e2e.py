@@ -99,7 +99,7 @@ def main():
     parser.add_argument('-d', '--dataset', dest='used_dataset', type=str, required=False, default=None,
                         choices=['fin', 'feta', 'tat', 'paper_text', 'nq', 'paper_tab'],
                         help='The used dataset (if it is not specified, then all datasets are used).')
-    parser.add_argument('--emd', dest='embedder', type=str, required=False, default='colbert',
+    parser.add_argument('--emb', dest='embedder', type=str, required=False, default='colbert',
                         choices=['bm25', 'all-MiniLM-L6-v2', 'all-mpnet-base-v2', 'openai', 'colbert'],
                         help='The tested embedder.')
     parser.add_argument('--hf_token', dest='hf_token', type=str, required=False, default='',
@@ -129,7 +129,7 @@ def main():
     rag_benchmark_logger.info(f'LLM service {llm_name} is initialized.')
 
     for ds_name in dataset_name_list:
-        rag_benchmark_logger.info(f'=== Start {ds_name} on {llm_base_name} ===')
+        rag_benchmark_logger.info(f'=== Start {ds_name} on {llm_base_name} with {args.embedder} embedder ===')
         res_file_name = os.path.join(res_dir, f'{ds_name}_{llm_base_name}_{args.embedder}.jsonl')
         if os.path.isfile(res_file_name):
             os.remove(res_file_name)
@@ -164,12 +164,13 @@ def main():
                     f.write(json.dumps(res_dict) + '\n')
                 del res_dict
             rt.reset_collection(collection_name, args.embedder)
-        rag_benchmark_logger.info(f'=== Finish {ds_name} ===\n')
 
         with open(res_file_name, 'r') as f:
             data = [json.loads(line) for line in f]
         eval_main_custom(ds_name, data)
         del data
+
+        rag_benchmark_logger.info(f'=== Finish {ds_name} on {llm_base_name} with {args.embedder} embedder ===\n')
 
         gc.collect()
         torch.cuda.empty_cache()
