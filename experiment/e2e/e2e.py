@@ -11,7 +11,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-sys.path.append(os.path.join('..', '..', os.path.dirname(__file__)))
+root_directory = os.path.join('..', '..', os.path.dirname(__file__))
+sys.path.append(root_directory)
+os.chdir(root_directory)
+
 
 from uda.utils import retrieve as rt
 from uda.utils import preprocess as pre
@@ -116,7 +119,7 @@ def main():
     else:
         dataset_name_list = [args.used_dataset]
 
-    res_dir = os.path.join(os.path.dirname(__file__), 'res')
+    res_dir = os.path.join(root_directory, 'experiment', 'e2e', 'res')
     if not os.path.exists(res_dir):
         os.makedirs(res_dir)
     rag_benchmark_logger.info(f'The directory with results is {res_dir}.')
