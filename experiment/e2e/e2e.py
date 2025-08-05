@@ -3,6 +3,7 @@ import gc
 import json
 import logging
 import os
+from pathlib import Path
 import random
 import sys
 import warnings
@@ -11,9 +12,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-root_directory = os.path.join('..', '..', os.path.dirname(__file__))
+root_directory = str(Path(os.path.abspath(os.path.dirname(__file__))).resolve().parents[1])
 sys.path.append(root_directory)
 os.chdir(root_directory)
+print(f'ROOT DIRECTORY: {root_directory}')
 
 
 from uda.utils import retrieve as rt
