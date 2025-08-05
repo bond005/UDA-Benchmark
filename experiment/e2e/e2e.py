@@ -108,13 +108,19 @@ def main():
                         choices=['bm25', 'all-MiniLM-L6-v2', 'all-mpnet-base-v2', 'openai', 'colbert'],
                         help='The tested embedder.')
     parser.add_argument('--hf_token', dest='hf_token', type=str, required=False, default='',
-                        help='The Huggingface token to access the HuggingFace models')
+                        help='The Huggingface token to access the HuggingFace models.')
+    parser.add_argument('--top_k', dest='top_k', type=int, required=False, default=20,
+                        help='Maximum number of relevant chunks (top-K).')
     args = parser.parse_args()
 
     if len(args.hf_token.strip()) == 0:
         uda.utils.access_config.HF_TOKEN = False
     else:
         uda.utils.access_config.HF_TOKEN = args.hf_token.strip()
+
+    embedder_name = args.embedder
+    if embedder_name in {'all-mpnet-base-v2', 'all-MiniLM-L6-v2'}:
+        embedder_name = 'sentence-transformers/' + embedder_name
 
     if args.used_dataset is None:
         dataset_name_list = ['fin', 'feta', 'tat', 'paper_text', 'nq', 'paper_tab']
@@ -134,8 +140,8 @@ def main():
     rag_benchmark_logger.info(f'LLM service {llm_name} is initialized.')
 
     for ds_name in dataset_name_list:
-        rag_benchmark_logger.info(f'=== Start {ds_name} on {llm_base_name} with {args.embedder} embedder ===')
-        res_file_name = os.path.join(res_dir, f'{ds_name}_{llm_base_name}_{args.embedder}.jsonl')
+        rag_benchmark_logger.info(f'=== Start {ds_name} on {llm_base_name} with {os.path.basename(embedder_name)} embedder (top-k = {args.top_k}) ===')
+        res_file_name = os.path.join(res_dir, f'{ds_name}_{llm_base_name}_{os.path.basename(embedder_name)}_{"{0:>03}".format(args.top_k)}.jsonl')
         if os.path.isfile(res_file_name):
             os.remove(res_file_name)
 
@@ -152,11 +158,11 @@ def main():
                 continue
             # Prepare the index for the document
             collection_name = f'{ds_name}_vector_db'
-            collection = rt.prepare_collection(pdf_path, collection_name, args.embedder)
+            collection = rt.prepare_collection(pdf_path, collection_name, embedder_name)
             for qa_item in bench_data[doc]:
                 question = qa_item['question']
                 # Retrieve the contexts
-                contexts = rt.get_contexts(collection, question, args.embedder)
+                contexts = rt.get_contexts(collection, question, embedder_name, top_k=args.top_k)
                 context_text = '\n'.join(contexts)
                 # Create the prompt
                 llm_message = llm.make_prompt(question, context_text, ds_name, llm_base_name)
@@ -168,14 +174,14 @@ def main():
                 with open(res_file_name, 'a') as f:
                     f.write(json.dumps(res_dict) + '\n')
                 del res_dict
-            rt.reset_collection(collection_name, args.embedder)
+            rt.reset_collection(collection_name, embedder_name)
 
         with open(res_file_name, 'r') as f:
             data = [json.loads(line) for line in f]
         eval_main_custom(ds_name, data)
         del data
 
-        rag_benchmark_logger.info(f'=== Finish {ds_name} on {llm_base_name} with {args.embedder} embedder ===\n')
+        rag_benchmark_logger.info(f'=== Finish {ds_name} on {llm_base_name} with {os.path.basename(embedder_name)} embedder (top-k = {args.top_k}) ===\n')
 
         gc.collect()
         torch.cuda.empty_cache()
@@ -184,6 +190,7 @@ def main():
 if __name__ == '__main__':
     warnings.simplefilter(action='ignore', category=FutureWarning)
     warnings.simplefilter(action='ignore', category=DeprecationWarning)
+    warnings.simplefilter(action='ignore', category=UserWarning)
     rag_benchmark_logger.setLevel(logging.INFO)
     fmt_str = '%(filename)s[LINE:%(lineno)d]# %(levelname)-8s ' \
               '[%(asctime)s]  %(message)s'
