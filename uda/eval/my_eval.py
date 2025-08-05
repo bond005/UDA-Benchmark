@@ -49,11 +49,11 @@ def call_f1_eval(dataset, answers, preds):
     from uda.eval.utils.feta_eval import feta_evaluate
     from uda.eval.utils.nq_eval import nq_evaluate
 
-    if dataset == "paper":
+    if dataset == 'paper':
         res = paper_evaluate(answers, preds)
-    elif dataset == "feta":
+    elif dataset == 'feta':
         res = feta_evaluate(answers, preds)
-    elif dataset == "nq":
+    elif dataset == 'nq':
         res = nq_evaluate(answers, preds)
 
     print(res)
